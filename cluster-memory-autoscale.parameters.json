@@ -1,0 +1,8 @@
+[
+
+  {
+    "ParameterKey": "ClusterStack",
+    "ParameterValue": "${CLUSTER_STACK_NAME}"
+  }
+]
+

@@ -1,0 +1,118 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "",
+  "Parameters": {
+    "ClusterStack": {
+      "Description": "ECS Cluster stack name to deploy service into",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "ScaleUpPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${ClusterStack}-ECSAutoScalingGroup"
+          }
+        },
+        "Cooldown": "300",
+        "ScalingAdjustment": "1"
+      }
+    },
+    "ScaleDownPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AdjustmentType": "ChangeInCapacity",
+        "AutoScalingGroupName": {
+          "Fn::ImportValue": {
+            "Fn::Sub": "${ClusterStack}-ECSAutoScalingGroup"
+          }
+        },
+        "Cooldown": "300",
+        "ScalingAdjustment": "-1"
+      }
+    },
+    "CPUAlarmHigh": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "EvaluationPeriods": "1",
+        "Statistic": "Average",
+        "Threshold": "90",
+        "AlarmDescription": "Alarm if memory reservation is too high",
+        "Period": "300",
+        "AlarmActions": [
+          {
+            "Ref": "ScaleUpPolicy"
+          }
+        ],
+        "Namespace": "AWS/ECS",
+        "Dimensions": [
+          {
+            "Name": "ClusterName",
+            "Value": {
+              "Fn::ImportValue": {
+                "Fn::Sub": "${ClusterStack}-ECSCluster"
+              }
+            }
+          }
+        ],
+        "ComparisonOperator": "GreaterThanThreshold",
+        "MetricName": "MemoryReservation"
+      }
+    },
+    "CPUAlarmLow": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "EvaluationPeriods": "1",
+        "Statistic": "Average",
+        "Threshold": "50",
+        "AlarmDescription": "Alarm if memory reservation is underutilized",
+        "Period": "300",
+        "AlarmActions": [
+          {
+            "Ref": "ScaleDownPolicy"
+          }
+        ],
+        "Namespace": "AWS/ECS",
+        "Dimensions": [
+          {
+            "Name": "ClusterName",
+            "Value": {
+              "Fn::ImportValue": {
+                "Fn::Sub": "${ClusterStack}-ECSCluster"
+              }
+            }
+          }
+        ],
+        "ComparisonOperator": "LessThanThreshold",
+        "MetricName": "MemoryReservation"
+      }
+    }
+  },
+  "Outputs": {
+    "ClusterScaleUpPolicy": {
+      "Description": "The task name of the  contribution api",
+      "Value": {
+        "Ref": "ScaleUpPolicy"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-ClusterScaleUpPolicy"
+        }
+      }
+    },
+    "ClusterScaleDownPolicy": {
+      "Description": "The task name of the  contribution api",
+      "Value": {
+        "Ref": "ScaleDownPolicy"
+      },
+      "Export": {
+        "Name": {
+          "Fn::Sub": "${AWS::StackName}-ClusterScaleDownPolicy"
+        }
+      }
+    }
+  }
+}
